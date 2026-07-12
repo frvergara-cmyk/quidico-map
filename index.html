@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CECOSF Quidico</title>
 
-<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css">
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
@@ -123,6 +123,47 @@
     background: rgba(255,255,255,0.22);
   }
 
+  /* POPUP */
+  .leaflet-popup-content {
+    font-family: 'Inter', sans-serif;
+    max-width: 300px;
+  }
+
+  .popup-img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    max-height: 200px;
+    object-fit: cover;
+  }
+
+  .popup-cat {
+    display: inline-block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .popup-title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1b1b1b;
+  }
+
+  .popup-desc {
+    margin: 0;
+    font-size: 12px;
+    color: #555;
+    line-height: 1.4;
+  }
+
   /* MÓVIL */
   @media(max-width:768px) {
     .app-header {
@@ -170,8 +211,6 @@
 </header>
 
 <script>
-mapboxgl.accessToken = "pk.eyJ1IjoiY2FuaW5vMTIzIiwiYSI6ImNtcmgwcnl5MTFmYzIyeG9pMmlsOTYxN2UifQ.i0uVBYe1GJ0MlzvIuAZGzw";
-
 const CATEGORIAS = {
   naturaleza:  { label: "Naturaleza",   color: "#22c55e" },
   gastronomia: { label: "Gastronomía",  color: "#f97316" },
@@ -182,14 +221,12 @@ const CATEGORIAS = {
   instituciones: { label: "Instituciones", color: "#ef4444" }
 };
 
-const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/mapbox/satellite-streets-v12",
-  center: [-73.48618488576602, -38.24882083731832],
-  zoom: 15
-});
+const map = L.map('map').setView([-38.24882083731832, -73.48618488576602], 15);
 
-map.addControl(new mapboxgl.NavigationControl(), "top-right");
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
 
 let activas = [];
 let todosLosLugares = [];
@@ -207,8 +244,7 @@ function aplicarFiltros() {
   markerRefs.forEach(ref => {
     const categoria = ref.feature.properties.category;
     const visible = activas.length === 0 || activas.includes(categoria);
-    const markerEl = ref.marker.getElement();
-    markerEl.style.display = visible ? "" : "none";
+    ref.marker.setOpacity(visible ? 1 : 0);
   });
 }
 
@@ -222,32 +258,86 @@ function actualizarUI() {
 
 function crearRail() {
   const rail = document.getElementById('filtroRail');
+  if (!rail) {
+    const railDiv = document.createElement('div');
+    railDiv.id = 'filtroRail';
+    railDiv.style.cssText = `
+      position: fixed;
+      left: 12px;
+      top: 140px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px;
+      background: rgba(20, 35, 32, 0.8);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.15);
+    `;
+    document.body.appendChild(railDiv);
+  }
+
+  const filtroRail = document.getElementById('filtroRail');
+  filtroRail.innerHTML = '';
+
   Object.entries(CATEGORIAS).forEach(([id, cat]) => {
     const btn = document.createElement('button');
     btn.className = 'filtro-btn';
     btn.dataset.cat = id;
-    btn.innerHTML = `
-      <span class="filtro-dot" style="background:${cat.color}"></span>
-      <span class="filtro-label">${cat.label}</span>
+    btn.style.cssText = `
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     `;
+
+    const dot = document.createElement('span');
+    dot.style.cssText = `
+      width: 12px;
+      height: 12px;
+      background: ${cat.color};
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+    `;
+
+    btn.appendChild(dot);
+    btn.title = cat.label;
     btn.addEventListener('click', () => toggleFiltro(id));
-    rail.appendChild(btn);
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = 'rgba(255,255,255,0.3)';
+      btn.style.transform = 'scale(1.1)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = 'rgba(255,255,255,0.2)';
+      btn.style.transform = 'scale(1)';
+    });
+
+    filtroRail.appendChild(btn);
   });
 }
 
-function mostrarPopup(feature, coords) {
+function mostrarPopup(feature, latlng) {
   const cat = CATEGORIAS[feature.properties.category] || { label: 'Punto', color: '#888' };
   const photoHTML = feature.properties.photo ? `<img src="${feature.properties.photo}" class="popup-img" alt="">` : '';
 
-  new mapboxgl.Popup({ offset: 24 })
-    .setLngLat(coords)
-    .setHTML(`
-      ${photoHTML}
-      <span class="popup-cat" style="background:${cat.color}">${cat.label}</span>
-      <h3 class="popup-title">${feature.properties.name}</h3>
-      <p class="popup-desc">${feature.properties.description || ""}</p>
-    `)
-    .addTo(map);
+  const popupHTML = `
+    ${photoHTML}
+    <span class="popup-cat" style="background:${cat.color}">${cat.label}</span>
+    <h3 class="popup-title">${feature.properties.name}</h3>
+    <p class="popup-desc">${feature.properties.description || ""}</p>
+  `;
+
+  L.popup()
+    .setLatLng(latlng)
+    .setContent(popupHTML)
+    .openOn(map);
 }
 
 function cargarDatos() {
@@ -259,12 +349,19 @@ function cargarDatos() {
       data.features.forEach(feature => {
         const cat = CATEGORIAS[feature.properties.category] || { label: feature.properties.category, color: "#888" };
         const coords = feature.geometry.coordinates;
+        const latlng = [coords[1], coords[0]];
 
-        const marker = new mapboxgl.Marker({ color: cat.color })
-          .setLngLat(coords)
-          .addTo(map);
+        const marker = L.circleMarker(latlng, {
+          radius: 8,
+          fillColor: cat.color,
+          color: '#fff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map);
 
-        marker.getElement().addEventListener('click', () => mostrarPopup(feature, coords));
+        marker.on('click', () => mostrarPopup(feature, latlng));
+
         markerRefs.push({ feature, marker });
       });
 
@@ -273,7 +370,8 @@ function cargarDatos() {
     .catch(err => console.error('Error cargando datos:', err));
 }
 
-map.on("load", cargarDatos);
+map.on('load', cargarDatos);
+cargarDatos();
 </script>
 
 </body>

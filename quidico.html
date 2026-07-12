@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CECOSF QUIDICO</title>
 
-<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css">
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <style>
   :root{
@@ -169,7 +169,7 @@
     }
   }
 
-  .mapboxgl-popup-content{
+  .leaflet-popup-content{
     font-family:inherit;
     max-width:320px;
   }
@@ -239,8 +239,6 @@
 </div>
 
 <script>
-mapboxgl.accessToken = "pk.eyJ1IjoiY2FuaW5vMTIzIiwiYSI6ImNtcmgwcnl5MTFmYzIyeG9pMmlsOTYxN2UifQ.i0uVBYe1GJ0MlzvIuAZGzw";
-
 const CATEGORIAS = {
   naturaleza:  { label: "Naturaleza",   color: "#22c55e" },
   gastronomia: { label: "Gastronomía",  color: "#f97316" },
@@ -251,14 +249,12 @@ const CATEGORIAS = {
   instituciones: { label: "Instituciones", color: "#ef4444" }
 };
 
-const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/mapbox/satellite-streets-v12",
-  center: [-73.48618488576602, -38.24882083731832],
-  zoom: 15
-});
+const map = L.map('map').setView([-38.24882083731832, -73.48618488576602], 15);
 
-map.addControl(new mapboxgl.NavigationControl(), "top-right");
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
 
 // Estado
 let activas = [];
@@ -277,8 +273,7 @@ function aplicarFiltros() {
   const visibles = activas.length === 0 ? todosLosLugares : todosLosLugares.filter(l => activas.includes(l.properties.category));
   markerRefs.forEach(ref => {
     const visible = visibles.some(v => v.properties.name === ref.feature.properties.name);
-    const markerEl = ref.marker.getElement();
-    markerEl.style.display = visible ? "" : "none";
+    ref.marker.setOpacity(visible ? 1 : 0);
   });
 }
 
@@ -305,19 +300,19 @@ function crearRail() {
   });
 }
 
-function mostrarPopup(feature, coords) {
+function mostrarPopup(feature, latlng) {
   const cat = CATEGORIAS[feature.properties.category] || { label: 'Punto', color: '#888' };
   const photoHTML = feature.properties.photo ? `<img src="${feature.properties.photo}" class="popup-img" alt="">` : '';
 
-  new mapboxgl.Popup({ offset: 24 })
-    .setLngLat(coords)
-    .setHTML(`
+  L.popup()
+    .setLatLng(latlng)
+    .setContent(`
       ${photoHTML}
       <span class="popup-cat" style="background:${cat.color}">${cat.label}</span>
       <h3 class="popup-title">${feature.properties.name}</h3>
       <p class="popup-desc">${feature.properties.description || ""}</p>
     `)
-    .addTo(map);
+    .openOn(map);
 }
 
 function cargarDatos() {
@@ -329,12 +324,18 @@ function cargarDatos() {
       data.features.forEach(feature => {
         const cat = CATEGORIAS[feature.properties.category] || { label: feature.properties.category, color: "#888" };
         const coords = feature.geometry.coordinates;
+        const latlng = [coords[1], coords[0]];
 
-        const marker = new mapboxgl.Marker({ color: cat.color })
-          .setLngLat(coords)
-          .addTo(map);
+        const marker = L.circleMarker(latlng, {
+          radius: 8,
+          fillColor: cat.color,
+          color: '#fff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map);
 
-        marker.getElement().addEventListener('click', () => mostrarPopup(feature, coords));
+        marker.on('click', () => mostrarPopup(feature, latlng));
         markerRefs.push({ feature, marker });
       });
 
@@ -347,6 +348,7 @@ function cargarDatos() {
 }
 
 map.on("load", cargarDatos);
+cargarDatos();
 </script>
 
 </body>
