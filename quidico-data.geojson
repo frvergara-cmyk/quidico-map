@@ -1,0 +1,69 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Capilla católica",
+        "category": "espiritualidad",
+        "description": "Espacio sagrado, destinado a la oración, la celebración de misas o la adoración",
+        "photo": "https://iglesiadeconcepcion.cl/wp-content/uploads/2023/06/WhatsApp-Image-2023-06-20-at-10.12.01-3-1024x768.jpeg"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.485826,
+          -38.248398
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sindicato de pescadores",
+        "category": "pesca",
+        "description": "Agrupaciones reúnen a pescadores, buzos mariscadores y recolectores de orilla, sirviendo como motores fundamentales para la economía local y la defensa de sus derechos",
+        "photo": "https://www.subpesca.cl/portal/617/articles-98632_imagen_portada.thumb_i754x286.jpg"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.490353,
+          -38.248546
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Caleta Pescadores",
+        "category": "pesca",
+        "description": "Caleta artesanal con tradición",
+        "photo": "https://assets.tvu.cl/2026/03/WhatsApp-Image-2026-03-05-at-5.57.34-PM-850x500.jpeg"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.491378,
+          -38.243565
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bomberos Quidico",
+        "category": "instituciones",
+        "description": "Voluntarios de los servicios de emergencia dedicados a salvar vidas, proteger bienes y rescatar animales frente a incendios, accidentes de tráfico, desastres naturales",
+        "photo": "https://miro.medium.com/v2/resize:fit:640/format:webp/1*SfToK8T-l2AG5WdOEHnUWA.png"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.48618488576602,
+          -38.24882083731832
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CECOSF QUIDICO</title>
+
+<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.js"></script>
+
+<style>
+  :root{
+    --nat:#22c55e;
+    --gas:#f97316;
+    --pes:#3b82f6;
+    --art:#6b7280;
+    --alo:#a21caf;
+    --esp:#8b5cf6;
+    --inst:#ef4444;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100%;
+  }
+  #header{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    z-index:5;
+    padding:16px 18px;
+    background:linear-gradient(135deg, #1b3a2f 0%, #2d5a4f 100%);
+    color:#fff;
+  }
+  #header h1{
+    margin:0;
+    font-size:18px;
+    font-weight:600;
+  }
+  #header p{
+    margin:4px 0 0;
+    font-size:12px;
+    opacity:.8;
+  }
+  #map{
+    width:100%;
+    height:100%;
+  }
+
+  /* Rail de filtros */
+  #filtroRail{
+    position:absolute;
+    left:12px;
+    top:72px;
+    z-index:10;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    padding:10px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,0.15);
+    background:rgba(20, 35, 32, 0.45);
+    box-shadow:0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter:blur(12px);
+    transition:all 0.3s ease;
+  }
+
+  #filtroRail.mobile{
+    backdrop-filter:blur(8px);
+    background:rgba(20, 35, 32, 0.6);
+  }
+
+  .filtro-toggle{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    background:transparent;
+    border:none;
+    color:rgba(255,255,255,0.6);
+    cursor:pointer;
+    transition:all 0.2s;
+    margin-bottom:6px;
+  }
+
+  .filtro-toggle:hover{
+    background:rgba(255,255,255,0.1);
+    color:#fff;
+  }
+
+  .filtro-toggle svg{
+    transition:transform 0.3s;
+    width:16px;
+    height:16px;
+  }
+
+  #filtroRail.open .filtro-toggle svg{
+    transform:rotate(180deg);
+  }
+
+  .filtro-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,0.15);
+    color:#fff;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all 0.3s;
+    white-space:nowrap;
+    overflow:hidden;
+    width:28px;
+    min-width:28px;
+  }
+
+  .filtro-btn.activa{
+    background:rgba(255,255,255,0.3);
+  }
+
+  #filtroRail.open .filtro-btn{
+    width:160px;
+    justify-content:flex-start;
+  }
+
+  .filtro-btn:hover{
+    background:rgba(255,255,255,0.25);
+  }
+
+  .filtro-dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    flex-shrink:0;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4);
+  }
+
+  .filtro-label{
+    opacity:0;
+    max-width:0;
+    transition:all 0.3s;
+  }
+
+  #filtroRail.open .filtro-label{
+    opacity:1;
+    max-width:120px;
+  }
+
+  @media (hover:hover) and (pointer:fine){
+    #filtroRail:hover .filtro-btn{
+      width:160px;
+      justify-content:flex-start;
+    }
+    #filtroRail:hover .filtro-label{
+      opacity:1;
+      max-width:120px;
+    }
+  }
+
+  .mapboxgl-popup-content{
+    font-family:inherit;
+    max-width:320px;
+  }
+
+  .popup-img{
+    width:100%;
+    height:auto;
+    border-radius:6px;
+    margin-bottom:8px;
+    max-height:200px;
+    object-fit:cover;
+  }
+
+  .popup-cat{
+    display:inline-block;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:#fff;
+    padding:4px 8px;
+    border-radius:6px;
+    margin-bottom:6px;
+    font-weight:600;
+  }
+
+  .popup-title{
+    margin:0 0 4px;
+    font-size:14px;
+    font-weight:600;
+    color:#1b1b1b;
+  }
+
+  .popup-desc{
+    margin:0;
+    font-size:12px;
+    color:#555;
+    line-height:1.4;
+  }
+
+  @media (max-width:640px){
+    #header{
+      font-size:14px;
+    }
+    #header h1{
+      font-size:16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="header">
+    <h1>CECOSF QUIDICO</h1>
+    <p>Mapa de activos comunitarios</p>
+  </div>
+
+  <div id="filtroRail">
+    <button class="filtro-toggle" id="toggleFiltro" aria-label="Expandir filtros">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<script>
+mapboxgl.accessToken = "pk.eyJ1IjoiY2FuaW5vMTIzIiwiYSI6ImNtcmgwcnl5MTFmYzIyeG9pMmlsOTYxN2UifQ.i0uVBYe1GJ0MlzvIuAZGzw";
+
+const CATEGORIAS = {
+  naturaleza:  { label: "Naturaleza",   color: "#22c55e" },
+  gastronomia: { label: "Gastronomía",  color: "#f97316" },
+  pesca:       { label: "Pesca",        color: "#3b82f6" },
+  artesania:   { label: "Artesanía",    color: "#6b7280" },
+  alojamiento: { label: "Alojamiento",  color: "#a21caf" },
+  espiritualidad: { label: "Espiritualidad", color: "#8b5cf6" },
+  instituciones: { label: "Instituciones", color: "#ef4444" }
+};
+
+const map = new mapboxgl.Map({
+  container: "map",
+  style: "mapbox://styles/mapbox/satellite-streets-v12",
+  center: [-73.48618488576602, -38.24882083731832],
+  zoom: 15
+});
+
+map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+// Estado
+let activas = [];
+let todosLosLugares = [];
+const markerRefs = [];
+
+function toggleFiltro(id) {
+  activas = activas.includes(id)
+    ? activas.filter(x => x !== id)
+    : [...activas, id];
+  aplicarFiltros();
+  actualizarUI();
+}
+
+function aplicarFiltros() {
+  const visibles = activas.length === 0 ? todosLosLugares : todosLosLugares.filter(l => activas.includes(l.properties.category));
+  markerRefs.forEach(ref => {
+    const visible = visibles.some(v => v.properties.name === ref.feature.properties.name);
+    const markerEl = ref.marker.getElement();
+    markerEl.style.display = visible ? "" : "none";
+  });
+}
+
+function actualizarUI() {
+  const botones = document.querySelectorAll('.filtro-btn');
+  botones.forEach(btn => {
+    const id = btn.dataset.cat;
+    btn.classList.toggle('activa', activas.includes(id));
+  });
+}
+
+function crearRail() {
+  const rail = document.getElementById('filtroRail');
+  Object.entries(CATEGORIAS).forEach(([id, cat]) => {
+    const btn = document.createElement('button');
+    btn.className = 'filtro-btn';
+    btn.dataset.cat = id;
+    btn.innerHTML = `
+      <span class="filtro-dot" style="background:${cat.color}"></span>
+      <span class="filtro-label">${cat.label}</span>
+    `;
+    btn.addEventListener('click', () => toggleFiltro(id));
+    rail.appendChild(btn);
+  });
+}
+
+function mostrarPopup(feature, coords) {
+  const cat = CATEGORIAS[feature.properties.category] || { label: 'Punto', color: '#888' };
+  const photoHTML = feature.properties.photo ? `<img src="${feature.properties.photo}" class="popup-img" alt="">` : '';
+
+  new mapboxgl.Popup({ offset: 24 })
+    .setLngLat(coords)
+    .setHTML(`
+      ${photoHTML}
+      <span class="popup-cat" style="background:${cat.color}">${cat.label}</span>
+      <h3 class="popup-title">${feature.properties.name}</h3>
+      <p class="popup-desc">${feature.properties.description || ""}</p>
+    `)
+    .addTo(map);
+}
+
+function cargarDatos() {
+  fetch("quidico-data.geojson")
+    .then(res => res.json())
+    .then(data => {
+      todosLosLugares = data.features;
+
+      data.features.forEach(feature => {
+        const cat = CATEGORIAS[feature.properties.category] || { label: feature.properties.category, color: "#888" };
+        const coords = feature.geometry.coordinates;
+
+        const marker = new mapboxgl.Marker({ color: cat.color })
+          .setLngLat(coords)
+          .addTo(map);
+
+        marker.getElement().addEventListener('click', () => mostrarPopup(feature, coords));
+        markerRefs.push({ feature, marker });
+      });
+
+      crearRail();
+      document.getElementById('toggleFiltro').addEventListener('click', () => {
+        document.getElementById('filtroRail').classList.toggle('open');
+      });
+    })
+    .catch(err => console.error('Error cargando datos:', err));
+}
+
+map.on("load", cargarDatos);
+</script>
+
+</body>
+</html>
